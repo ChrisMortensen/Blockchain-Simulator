@@ -27,13 +27,13 @@ class Wallet():
         return balance
 
 
-
 class Transaction():
     
     fee = 1
 
     def __init__(self, sender_wallet: Wallet, recipient_address: bytes, amount: int, utxos: list):
-        self.sender_pubkey = sender_wallet.public_key
+        self.sender_public_key = sender_wallet.public_key
+        self.sender_address = sender_wallet.get_address()
         self.recipient_address = recipient_address
         self.inputs = []
         self.outputs = []
@@ -87,9 +87,45 @@ class Transaction():
     def verify(self):
         """Verify signature with sender pubkey"""
         try:
-            return self.sender_pubkey.verify(self.signature, self._serialize_for_signing())
+            return self.sender_public_key.verify(self.signature, self._serialize_for_signing())
         except:
             return False
+
+
+class Blockchain():
+
+    def __init__(self):
+        self.chain = []
+        self.utxo_set = []
+        self.mempool = []
+
+    def add_genesis_utxos(self, initial_utxos):
+        self.utxo_set.extend(initial_utxos)
+    
+    def add_transaction(self, transaction: Transaction):
+        self.mempool.append(transaction)
+
+    def process_mempool(self):
+        for tx in list(self.mempool):
+            if not tx.verify():
+                raise ValueError("Invalid signature")
+
+            for input in tx.inputs:
+                if input not in self.utxo_set or input['owner_address'] != tx.sender_address:
+                    raise ValueError("Invalid UTXO")
+
+            for input in tx.inputs:
+                self.utxo_set.remove(input)
+            
+            for index, output in enumerate(tx.outputs):
+                new_utxo = {
+                    "txid": tx.txid,
+                    "index": index,
+                    "amount": output['amount'],
+                    "owner_address": output['owner_address']
+                }
+                self.utxo_set.append(new_utxo)
+
 
 def print_all_balances(wallets: list, utxo_set: list) -> None:
     for wallet in wallets:
@@ -97,32 +133,33 @@ def print_all_balances(wallets: list, utxo_set: list) -> None:
         print(f"{wallet.get_address().to_string().hex()}'s balance: {balance}")
 
 if __name__ == "__main__":
-    # Create wallets
+    # Initialize environment
+    blockchain = Blockchain()
     alice = Wallet()
     bob = Wallet()
     chris = Wallet()
     wallets = [alice, bob, chris]
-
-    # Initial UTXO set (balances)
-    utxo_set = [
-        # genesis outputs
+    genesis_utxo_set = [
         {"txid": "initial_transaction", "index": 0, "amount": 50, "owner_address": alice.get_address()},
         {"txid": "initial_transaction", "index": 1, "amount": 50, "owner_address": bob.get_address()},
         {"txid": "initial_transaction", "index": 2, "amount": 50, "owner_address": chris.get_address()},
     ]
+    blockchain.add_genesis_utxos(genesis_utxo_set)
 
-    # Check balances
-    print_all_balances(wallets, utxo_set)
+    # Check initial balances
+    print("\nInitial Balances")
+    print_all_balances(wallets, blockchain.utxo_set)
 
     # Alice sends 5 to Bob
-    transaction = alice.create_transaction(bob.get_address(), 5, utxo_set)
+    tx1 = alice.create_transaction(bob.get_address(), 5, blockchain.utxo_set)
+    # Chris sends 7 to Bob
+    tx2 = chris.create_transaction(bob.get_address(), 7, blockchain.utxo_set)
+    # Append transactions to blockchain
+    blockchain.mempool.extend([tx1, tx2])
 
-    # Verify the transaction
-    is_valid = transaction.verify()
-    print(f"Transaction valid: {is_valid}")
+    # Process transactions
+    blockchain.process_mempool()
 
-    # Process transaction
-
-
-    # Check balances
-    print_all_balances(wallets, utxo_set)
+    # Check final balances
+    print("\nFinal Balances")
+    print_all_balances(wallets, blockchain.utxo_set)
