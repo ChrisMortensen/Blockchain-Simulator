@@ -1,5 +1,8 @@
 from ecdsa.keys import SigningKey
 import hashlib
+import time
+
+MINER_POW_SLEEP = 0.025 # Limit computation requirements
 
 class Wallet():
 
@@ -17,7 +20,7 @@ class Wallet():
         return self.public_key.verify(signature, data)
 
     def create_transaction(self, recipient_address: bytes, amount: int, utxos: list):
-        return Transaction(self, recipient_address, amount, utxos)
+        return Transaction(sender_wallet=self, recipient_address=recipient_address, amount=amount, utxos=utxos)
 
     def get_balance(self, utxo_set: list) -> int:
         balance = 0
@@ -31,14 +34,26 @@ class Transaction():
     
     fee = 1
 
-    def __init__(self, sender_wallet: Wallet, recipient_address: bytes, amount: int, utxos: list):
-        self.sender_public_key = sender_wallet.public_key
-        self.sender_address = sender_wallet.get_address()
+    def __init__(self, recipient_address: bytes, amount: int, utxos: list, sender_wallet: Wallet = None, is_coinbase: bool = False):
         self.recipient_address = recipient_address
         self.inputs = []
         self.outputs = []
         self.amount = amount
         self.utxos = utxos
+
+        if is_coinbase:
+            self.sender_public_key = None
+            self.sender_address = None
+            self.outputs.append({'owner_address': recipient_address, 'amount': amount})
+            self.signature = b''
+            self.txid = self._compute_txid()
+            return
+        
+        if sender_wallet is None:
+            raise ValueError("sender_wallet is required for non-coinbase transactions")
+        
+        self.sender_public_key = sender_wallet.public_key
+        self.sender_address = sender_wallet.get_address()
 
         # 1. Create inputs (choose UTXOs to cover the amount + fee)
         selected_utxos = []
@@ -86,6 +101,8 @@ class Transaction():
 
     def verify(self):
         """Verify signature with sender pubkey"""
+        if self.sender_public_key is None: # Miner reward transaction
+            return True
         try:
             return self.sender_public_key.verify(self.signature, self._serialize_for_signing())
         except:
@@ -98,6 +115,9 @@ class Blockchain():
         self.chain = []
         self.utxo_set = []
         self.mempool = []
+        self.difficulty = 3
+        self.block_subsidy = 2
+        self.validator = Validator(self)
 
     def add_genesis_utxos(self, initial_utxos):
         self.utxo_set.extend(initial_utxos)
@@ -105,8 +125,16 @@ class Blockchain():
     def add_transaction(self, transaction: Transaction):
         self.mempool.append(transaction)
 
-    def process_mempool(self):
-        for tx in list(self.mempool):
+    @property
+    def last_block_hash(self):
+        if not self.chain:
+            return '0' * 64
+        return self.chain[-1].hash 
+    
+    def append_block(self, block):
+        self.chain.append(block)
+
+        for tx in list(block.transactions):
             if not tx.verify():
                 raise ValueError("Invalid signature")
 
@@ -125,7 +153,96 @@ class Blockchain():
                     "owner_address": output['owner_address']
                 }
                 self.utxo_set.append(new_utxo)
+            
+            if tx in self.mempool:
+                self.mempool.remove(tx)
 
+
+class Block():
+
+    def __init__(self, transactions, prev_hash):
+        self.transactions = transactions
+        self.prev_hash = prev_hash
+        self.hash = None
+        self.nonce = 0
+
+    def compute_hash(self):
+        data = self.prev_hash + str(self.transactions) + str(self.nonce)
+        self.hash = hashlib.sha256(data.encode()).hexdigest()
+
+
+class Miner(Wallet):
+    
+    def __init__(self):
+        super().__init__()
+
+    def mine(self, blockchain):
+        # Needs to make a new thread
+        while True:
+            prev_hash = blockchain.last_block_hash
+            transactions = blockchain.mempool.copy()
+            reward_amount = blockchain.block_subsidy + Transaction.fee * len(transactions)
+            reward_tx = Transaction(
+                sender_wallet=None,
+                recipient_address=miner.get_address(),
+                amount=reward_amount,
+                utxos=[],
+                is_coinbase=True
+            )
+            transactions.insert(0,reward_tx)
+
+            block = Block(transactions, prev_hash)
+            self._solve_block(block, blockchain)
+            return # No thred so for now just run once
+    
+    def _solve_block(self, block, blockchain):
+        prev_hash = blockchain.last_block_hash
+        while block.prev_hash == prev_hash:
+            block.compute_hash()
+            is_valid = is_valid_proof(blockchain, block)
+            if is_valid:
+                blockchain.validator.validate(block) # Implement handeling of wrong return 
+                # Maby a sleep is needed here, so the validator has time to process and miner doesnt start solving the same block
+                return
+            else:
+                time.sleep(MINER_POW_SLEEP)
+                block.nonce += 1 # Change this so different miners dont interate over the same values
+                prev_hash = blockchain.last_block_hash
+
+
+class Validator():
+    
+    def __init__(self, blockchain):
+        self.blockchain = blockchain
+
+    def validate(self, block):
+        for tx in block.transactions[1:]:
+            if tx not in self.blockchain.mempool:
+                raise ValueError("Invalid transactions")
+        
+        prev_hash = self.blockchain.last_block_hash
+        if block.prev_hash is not prev_hash:
+            raise ValueError("Invalid previous hash")
+
+        block.compute_hash()
+        is_valid_hash = is_valid_proof(self.blockchain, block)
+        if not is_valid_hash:
+            raise ValueError("Invalid proof of work")
+        
+        reward_tx = block.transactions[0]
+        reward_amount = blockchain.block_subsidy + Transaction.fee * (len(block.transactions) - 1)
+        if reward_tx.amount is not reward_amount:
+            raise ValueError("Invalid reward amount")
+
+        self.blockchain.append_block(block)
+        
+        return True
+
+
+def is_valid_proof(blockchain, block):
+    hash_int = int(block.hash, 16)
+    target = (1 << (256 - blockchain.difficulty)) - 1
+    return hash_int <= target
 
 def print_all_balances(wallets: list, utxo_set: list) -> None:
     for wallet in wallets:
@@ -138,7 +255,8 @@ if __name__ == "__main__":
     alice = Wallet()
     bob = Wallet()
     chris = Wallet()
-    wallets = [alice, bob, chris]
+    miner = Miner()
+    wallets = [alice, bob, chris, miner]
     genesis_utxo_set = [
         {"txid": "initial_transaction", "index": 0, "amount": 50, "owner_address": alice.get_address()},
         {"txid": "initial_transaction", "index": 1, "amount": 50, "owner_address": bob.get_address()},
@@ -158,7 +276,7 @@ if __name__ == "__main__":
     blockchain.mempool.extend([tx1, tx2])
 
     # Process transactions
-    blockchain.process_mempool()
+    miner.mine(blockchain)
 
     # Check final balances
     print("\nFinal Balances")
