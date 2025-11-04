@@ -1,10 +1,10 @@
 from .block import Block
 from .blockchain import Blockchain
 from .transaction import Transaction
-from .validator import Validator
+from .node import Node
 
 
 __all__ = ['Block', 
            'Blockchain', 
            'Transaction', 
-           'Validator']
+           'Node']

@@ -9,15 +9,22 @@ MINER_POW_SLEEP = 0.025 # Limit computation requirements
 
 class Miner(Wallet):
     
-    def __init__(self):
+    def __init__(self, node=None):
         super().__init__()
+        self.node = node
 
-    def mine(self, blockchain):
+    def mine(self):
         # Needs to make a new thread
+        if not self.node:
+            raise ValueError("Miner must be attached to a node")
+        
+        blockchain = self.node.blockchain
+
         while True:
             prev_hash = blockchain.last_block_hash
             transactions = blockchain.mempool.copy()
             reward_amount = blockchain.block_subsidy + Transaction.fee * len(transactions)
+            
             reward_tx = Transaction.coinbase(
                 recipient_address=self.get_address(),
                 reward=reward_amount
@@ -25,19 +32,19 @@ class Miner(Wallet):
             transactions.insert(0, reward_tx)
 
             block = Block(transactions, prev_hash)
-            self._solve_block(block, blockchain)
+            self._solve_block(block)
             return # No thred so for now just run once
     
-    def _solve_block(self, block, blockchain):
-        prev_hash = blockchain.last_block_hash
-        while block.prev_hash == prev_hash:
+    def _solve_block(self, block):
+        while True:
             block.compute_hash()
-            is_valid = is_valid_proof(blockchain, block)
-            if is_valid:
-                blockchain.validator.validate(block) # Implement handeling of wrong return 
-                # Maby a sleep is needed here, so the validator has time to process and miner doesnt start solving the same block
+
+            if is_valid_proof(block.hash, self.node.blockchain.difficulty):
+                self.node.receive_block(block)
                 return
-            else:
-                time.sleep(MINER_POW_SLEEP)
-                block.nonce += 1 # Change this so different miners dont interate over the same values
-                prev_hash = blockchain.last_block_hash
+
+            if block.prev_hash != self.node.blockchain.last_block_hash:
+                return
+
+            time.sleep(MINER_POW_SLEEP)
+            block.nonce += 1 # Change this so different miners dont interate over the same values

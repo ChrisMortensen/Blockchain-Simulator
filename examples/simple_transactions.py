@@ -3,17 +3,18 @@ import os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.core import Blockchain
+from src.core import Node
 from src.wallet import Wallet, Miner
 from src.utils import print_all_balances
 
 if __name__ == "__main__":
     # Initialize environment
-    blockchain = Blockchain()
     alice = Wallet()
     bob = Wallet()
     chris = Wallet()
-    miner = Miner()
+    node = Node()
+    blockchain = node.blockchain
+    miner = Miner(node)
     wallets = [alice, bob, chris, miner]
     genesis_utxo_set = [
         {"txid": "initial_transaction", "index": 0, "amount": 50, "owner_address": alice.get_address()},
@@ -30,11 +31,12 @@ if __name__ == "__main__":
     tx1 = alice.create_transaction(bob.get_address(), 5, blockchain.utxo_set)
     # Chris sends 7 to Bob
     tx2 = chris.create_transaction(bob.get_address(), 7, blockchain.utxo_set)
-    # Append transactions to blockchain
-    blockchain.mempool.extend([tx1, tx2])
+    # Append transactions to blockchain     # Legacy : blockchain.mempool.extend([tx1, tx2])
+    node.receive_transaction(tx1)
+    node.receive_transaction(tx2)
 
     # Process transactions
-    miner.mine(blockchain)
+    miner.mine()
 
     # Check final balances
     print("\nFinal Balances")
