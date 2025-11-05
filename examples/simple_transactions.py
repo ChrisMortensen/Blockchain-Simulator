@@ -3,7 +3,7 @@ import os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.core import Node
+from src.core import Network
 from src.wallet import Wallet, Miner
 from src.utils import print_all_balances
 
@@ -12,7 +12,8 @@ if __name__ == "__main__":
     alice = Wallet()
     bob = Wallet()
     chris = Wallet()
-    node = Node()
+    network = Network(1)
+    node = network.nodes[0]
     blockchain = node.blockchain
     miner = Miner(node)
     wallets = [alice, bob, chris, miner]
@@ -21,7 +22,7 @@ if __name__ == "__main__":
         {"txid": "initial_transaction", "index": 1, "amount": 50, "owner_address": bob.get_address()},
         {"txid": "initial_transaction", "index": 2, "amount": 50, "owner_address": chris.get_address()},
     ]
-    blockchain.add_genesis_utxos(genesis_utxo_set)
+    network.add_genesis_utxos(genesis_utxo_set)
 
     # Check initial balances
     print("\nInitial Balances")

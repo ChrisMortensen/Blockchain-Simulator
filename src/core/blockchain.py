@@ -8,9 +8,6 @@ class Blockchain():
         self.mempool = []
         self.difficulty = 3
         self.block_subsidy = 2
-
-    def add_genesis_utxos(self, initial_utxos):
-        self.utxo_set.extend(initial_utxos)
     
     def add_transaction(self, transaction: Transaction):
         self.mempool.append(transaction)

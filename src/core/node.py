@@ -18,9 +18,17 @@ class Node():
         if not transaction.verify():
             return False
         
+        self._propegate_transaction(transaction)
+
         self.blockchain.mempool.append(transaction)
         
         return True
+
+    def _propegate_transaction(self, transaction):
+        for peer in self.peers:
+            peer.receive_transaction(transaction)
+        return
+
 
     def receive_block(self, block):
         if block.hash in self.seen_blocks:
