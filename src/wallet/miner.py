@@ -31,7 +31,7 @@ class Miner(Wallet):
             )
             transactions.insert(0, reward_tx)
 
-            block = Block(transactions, prev_hash)
+            block = Block(transactions, prev_hash, self.node.blockchain.difficulty)
             self._solve_block(block)
             return # No thred so for now just run once
     

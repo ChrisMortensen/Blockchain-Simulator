@@ -62,7 +62,7 @@ class Node():
             raise ValueError("Invalid previous hash")
 
         block.compute_hash()
-        is_valid_hash = is_valid_proof(block.hash, self.blockchain.difficulty)
+        is_valid_hash = is_valid_proof(block.hash, block.difficulty)
         if not is_valid_hash:
             raise ValueError("Invalid proof of work")
         
