@@ -10,6 +10,9 @@ class Node():
         self.seen_blocks = set()
         self.seen_transactions = set()
 
+    def is_new_transaction(self, txid):
+        return not txid in self.seen_transactions
+
     def receive_transaction(self, transaction):
         if transaction.txid in self.seen_transactions:
             return False
@@ -18,17 +21,17 @@ class Node():
         if not transaction.verify():
             return False
         
-        self._propegate_transaction(transaction)
-
         self.blockchain.mempool.append(transaction)
+
+        self._propegate_transaction(transaction)
         
         return True
 
     def _propegate_transaction(self, transaction):
         for peer in self.peers:
-            peer.receive_transaction(transaction)
+            if peer.is_new_transaction(transaction.txid):
+                peer.receive_transaction(transaction)
         return
-
 
     def receive_block(self, block):
         if block.hash in self.seen_blocks:
