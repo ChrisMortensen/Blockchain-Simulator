@@ -6,6 +6,7 @@ class Wallet():
         from ecdsa.keys import SigningKey
         self.private_key = SigningKey.generate()
         self.public_key = self.private_key.get_verifying_key()
+        self.peers = set()
     
     def get_address(self):
         return self.public_key

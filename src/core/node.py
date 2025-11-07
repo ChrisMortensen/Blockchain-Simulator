@@ -6,7 +6,7 @@ class Node():
     
     def __init__(self, blockchain=None):
         self.blockchain = blockchain or Blockchain()
-        self.peers = []
+        self.peers = set()
         self.seen_blocks = set()
         self.seen_transactions = set()
 

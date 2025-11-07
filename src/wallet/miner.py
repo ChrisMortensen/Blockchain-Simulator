@@ -1,4 +1,5 @@
 import time
+import random
 
 from src.core.transaction import Transaction
 from src.core.block import Block
@@ -9,16 +10,16 @@ MINER_POW_SLEEP = 0.025 # Limit computation requirements
 
 class Miner(Wallet):
     
-    def __init__(self, node=None):
+    def __init__(self):
         super().__init__()
-        self.node = node
 
     def mine(self):
         # Needs to make a new thread
-        if not self.node:
+        if not self.peers:
             raise ValueError("Miner must be attached to a node")
         
-        blockchain = self.node.blockchain
+        self.primary_node = random.choice(list(self.peers))
+        blockchain = self.primary_node.blockchain
 
         while True:
             prev_hash = blockchain.last_block_hash
@@ -31,7 +32,7 @@ class Miner(Wallet):
             )
             transactions.insert(0, reward_tx)
 
-            block = Block(transactions, prev_hash, self.node.blockchain.difficulty)
+            block = Block(transactions, prev_hash, blockchain.difficulty)
             self._solve_block(block)
             return # No thred so for now just run once
     
@@ -39,11 +40,11 @@ class Miner(Wallet):
         while True:
             block.compute_hash()
 
-            if is_valid_proof(block.hash, self.node.blockchain.difficulty):
-                self.node.receive_block(block)
+            if is_valid_proof(block.hash, self.primary_node.blockchain.difficulty):
+                self.primary_node.receive_block(block)
                 return
 
-            if block.prev_hash != self.node.blockchain.last_block_hash:
+            if block.prev_hash != self.primary_node.blockchain.last_block_hash:
                 return
 
             time.sleep(MINER_POW_SLEEP)

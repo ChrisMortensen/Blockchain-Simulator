@@ -12,10 +12,10 @@ if __name__ == "__main__":
     alice = Wallet()
     bob = Wallet()
     chris = Wallet()
-    network = Network(1)
+    network = Network()
     node = network.nodes[0]
     blockchain = node.blockchain
-    miner = Miner(node)
+    miner = network.miners[0]
     wallets = [alice, bob, chris, miner]
     genesis_utxo_set = [
         {"txid": "initial_transaction", "index": 0, "amount": 50, "owner_address": alice.get_address()},
