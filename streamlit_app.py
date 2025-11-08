@@ -27,9 +27,9 @@ st.markdown("""
     color: black;
 }
 
-.metric-nodes { background-color: #e3f2fd; }
-.metric-edges { background-color: #f3e5f5; }
-.metric-distribution { background-color: #e8f5e8; }
+.metric-nodes { background-color: #e8f5e8; }
+.metric-edges { background-color: #e3f2fd; }
+.metric-distribution { background-color: #f3e5f5; }
 
             
 .metric-label {
@@ -102,7 +102,7 @@ class NetworkVisualizer:
                 color=properties["color"],
                 size=properties["size"], 
                 shape=properties["shape"],
-                title=f"Node {i}\nType: {node_type}\nConnections: 0"
+                #title=f"Node {i}\nType: {node_type}" # On hover
             )
 
     def _add_edges_to_graph(self):
@@ -213,20 +213,20 @@ def display_node_types():
     col1, col2, col3 = st.columns(3)
     with col1:
         st.markdown(f"""
-            <div class="node-type-label" style="color: #FF6B35;">🔶 Miners</div>
-            <div class="center-text">Block validation, network security</div>
+            <div class="node-type-label" style="color: #00A896;">🟢 Wallets</div>
+            <div class="center-text">User accounts: Signs off on transactions</div>
         """, unsafe_allow_html=True)
 
     with col2:
         st.markdown(f"""
-            <div class="node-type-label" style="color: #00A896;">🟢 Wallets</div>
-            <div class="center-text">User accounts, transactions</div>
+            <div class="node-type-label" style="color: #004E89;">🔵 Nodes</div>
+            <div class="center-text">Network: Stores, relays, and validates blockchain data</div>
         """, unsafe_allow_html=True)
 
     with col3:
         st.markdown(f"""
-            <div class="node-type-label" style="color: #004E89;">🔵 Nodes</div>
-            <div class="center-text">Network relays, data storage</div>
+            <div class="node-type-label" style="color: #FF6B35;">🔶 Miners</div>
+            <div class="center-text">Block creators: Processes transactions for rewards</div>
         """, unsafe_allow_html=True)
 
 def display_network_structure():
@@ -279,6 +279,7 @@ def display_main_page():
     
     # Display network  
     components.html(st.session_state.html_content, height=700)
+    #st.markdown("---")
 
     # Display tip
     #st.info("Drag nodes to rearrange the network. Zoom with mouse wheel.")
