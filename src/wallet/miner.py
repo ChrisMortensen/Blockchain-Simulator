@@ -1,5 +1,6 @@
 import time
 import random
+import threading
 
 from src.core.transaction import Transaction
 from src.core.block import Block
@@ -12,9 +13,22 @@ class Miner(Wallet):
     
     def __init__(self):
         super().__init__()
+        self.is_mining = False
+        self.mining_thread = None
 
-    def mine(self):
-        # Needs to make a new thread
+    def start_mining(self):
+        if not self.is_mining:
+            self.is_mining = True
+            self.miner_thread = threading.Thread(target=self._mine)
+            self.miner_thread.daemon = True
+            self.miner_thread.start()
+
+    def stop_mining(self):
+        if self.is_mining:
+            self.miner_thread.join()
+            self.is_mining = False
+
+    def _mine(self):
         if not self.peers:
             raise ValueError("Miner must be attached to a node")
         
@@ -34,7 +48,6 @@ class Miner(Wallet):
 
             block = Block(transactions, prev_hash, blockchain.difficulty)
             self._solve_block(block)
-            return # No thred so for now just run once
     
     def _solve_block(self, block):
         while True:

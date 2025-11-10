@@ -1,5 +1,6 @@
 import sys
 import os
+import time
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -36,8 +37,14 @@ if __name__ == "__main__":
     node.receive_transaction(tx1)
     node.receive_transaction(tx2)
 
+    # Get last block hash so we know when the transactions have been processed
+    latest_block = blockchain.last_block_hash
+
     # Process transactions
-    miner.mine()
+    miner.start_mining()
+
+    while latest_block == blockchain.last_block_hash:
+        time.sleep(0.001)
 
     # Check final balances
     print("\nFinal Balances")
