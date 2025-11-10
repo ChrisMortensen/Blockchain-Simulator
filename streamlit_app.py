@@ -67,8 +67,16 @@ class NetworkVisualizer:
         self.network = crypto_network
         self.show_labels = show_labels
         self.pyvis_net = pyvis_Network(height="700px", width="100%", bgcolor="#222222", font_color="white")
+        self.wallet_names = {}
 
-        self.generate_visualization()
+    def _give_wallets_names(self):
+        from faker import Faker
+        faker = Faker('en_US')
+        wallets = self.network.wallets
+        for wallet in wallets:
+            public_key = wallet.get_address().to_string().hex()
+            random_name = faker.name()
+            self.wallet_names[public_key] = random_name
 
     @property
     def all_nodes(self):
@@ -94,8 +102,13 @@ class NetworkVisualizer:
             node_id = start_id + i
             node_type = self._get_node_type(node)
             properties = NetworkVisualizer.node_properties[node_type]
-            label = f"{node_type} {i}" if self.show_labels else ""
-
+            label = ""
+            if self.show_labels:
+                label = f"{node_type} {i}"
+                if node_type == 'wallet':
+                    node_public_key = node.get_address().to_string().hex()
+                    node_name = self.wallet_names[node_public_key]
+                    label = node_name
             self.pyvis_net.add_node(
                 node_id, 
                 label=label,
@@ -113,9 +126,9 @@ class NetworkVisualizer:
                     if peer_index != None:
                         self.pyvis_net.add_edge(node_id, peer_index, width=1.5)
 
-    def generate_visualization(self):        
+    def generate_visualization(self):
+        self._give_wallets_names()
         self._add_nodes_to_graph()
-
         self._add_edges_to_graph()
         self.pyvis_net.set_options("""
         var options = {
@@ -166,6 +179,7 @@ def generate_network():
     network = Network(node_amount, wallet_amount, miner_amount, min_node_peers, min_wallet_peers, min_miner_peers)
 
     visualizer = NetworkVisualizer(network, show_labels)
+    visualizer.generate_visualization()
     html_content = visualizer.get_html_content()
 
     st.session_state.html_content = html_content
