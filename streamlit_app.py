@@ -9,7 +9,7 @@ from src.wallet.wallet import Wallet
 from src.wallet.miner import Miner
 
 st.set_page_config(
-    page_title="Crypto Network Visualizer",
+    page_title="Blockchain Visualizer",
     page_icon="🕸️",
     layout="wide",
     initial_sidebar_state="expanded")
@@ -64,8 +64,8 @@ class NetworkVisualizer:
         "node": {"color": "#004E89", "size": 30, "shape": "dot"}
     }
 
-    def __init__(self, crypto_network, show_labels=True):
-        self.network = crypto_network
+    def __init__(self, blockchain_network, show_labels=True):
+        self.network = blockchain_network
         self.show_labels = show_labels
         self.pyvis_net = pyvis_Network(height="700px", width="100%", bgcolor="#222222", font_color="white")
         self.wallet_names = {}
@@ -158,8 +158,8 @@ class NetworkVisualizer:
         """)
 
     def get_html_content(self):
-        self.pyvis_net.save_graph("crypto_network.html")
-        with open("crypto_network.html", "r", encoding="utf-8") as f:
+        self.pyvis_net.save_graph("blockchain_network.html")
+        with open("blockchain_network.html", "r", encoding="utf-8") as f:
             html_content = f.read()
         
         # Remove all borders surrounding the network (Yes they are all needed)
@@ -198,8 +198,8 @@ def generate_network():
     st.session_state.pyvis_net = visualizer.pyvis_net
 
 with st.sidebar:
-    st.title("Crypto Network Visualizer")
-    st.write("Visualize a cryptocurrency network")
+    st.title("Blockchain Network Visualizer")
+    st.write("Visualize blockchain networks of varying complexity")
     st.write("`Created by:`")
     linkedin_url = "https://www.linkedin.com/in/christiansvalgaard/"
     st.markdown(f'<a href="{linkedin_url}" target="_blank" style="text-decoration: none; color: inherit;"><img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" width="25" height="25" style="vertical-align: middle; margin-right: 10px;">`Christian S. Mortensen`</a>', unsafe_allow_html=True)
