@@ -1,6 +1,7 @@
 import streamlit as st
 from pyvis.network import Network as pyvis_Network
 import streamlit.components.v1 as components
+import random
 
 from src.core.network import Network
 from src.core.node import Node
@@ -102,20 +103,29 @@ class NetworkVisualizer:
             node_id = start_id + i
             node_type = self._get_node_type(node)
             properties = NetworkVisualizer.node_properties[node_type]
-            label = ""
-            if self.show_labels:
+            if node_type == 'wallet':
+                node_public_key = node.get_address().to_string().hex()
+                node_name = self.wallet_names[node_public_key]
+                label = node_name
+            else:
                 label = f"{node_type} {i}"
-                if node_type == 'wallet':
-                    node_public_key = node.get_address().to_string().hex()
-                    node_name = self.wallet_names[node_public_key]
-                    label = node_name
+            if not show_labels: label = ""
+
+            if isinstance(node, Wallet):
+                random_peer = random.choice(list(node.peers))
+                balance = node.get_balance(random_peer.blockchain.utxo_set)
+                title = f"Balance: {balance}"
+            if isinstance(node, Node):
+                peer_total = len(node.peers)
+                title = f"Peers: {peer_total}"
+            
             self.pyvis_net.add_node(
                 node_id, 
                 label=label,
                 color=properties["color"],
                 size=properties["size"], 
                 shape=properties["shape"],
-                #title=f"Node {i}\nType: {node_type}" # On hover
+                title=title # On hover
             )
 
     def _add_edges_to_graph(self):
