@@ -1,5 +1,8 @@
 # Blockchain Simulation
-This repository provides an interactive dashboard that helps in visualizing blockchain technology in networks of varying sizes. The dashboard is designed to be user-friendly and interactive, allowing users to explore how changes affect the network robustness and reliability.
+This repository provides a blockchain simulator with consensus and transaction-processing capabilities. It also features an interactive dashboard that helps in visualizing blockchain technology in networks of varying sizes. The dashboard is designed to be user-friendly and interactive, allowing users to explore how changes affect network structure.
+
+## Simulation
+For examples of how to implement your own blockchain simulation, refer to the `examples/` directory.
 
 ## Online Version
 [https://chrismortensen.streamlit.app](https://chrismortensen.streamlit.app)  
