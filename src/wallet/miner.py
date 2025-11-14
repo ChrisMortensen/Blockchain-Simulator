@@ -7,7 +7,7 @@ from src.core.block import Block
 from src.wallet.wallet import Wallet
 from src.utils.crypto import is_valid_proof
 
-MINER_POW_SLEEP = 1 # Limit ressource usage
+MINER_POW_SLEEP = 0.1 # Limit ressource usage
 
 class Miner(Wallet):
     

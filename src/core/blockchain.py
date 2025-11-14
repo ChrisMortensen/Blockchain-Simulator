@@ -7,7 +7,7 @@ class Blockchain():
         self.chain = []
         self.utxo_set = []
         self.mempool = []
-        self.difficulty = 7
+        self.difficulty = 5
         self.block_subsidy = 2
         self._create_genesis_block()
 
