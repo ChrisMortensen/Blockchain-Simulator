@@ -1,8 +1,8 @@
-# Blockchain Simulation
+# Blockchain Simulator
 This repository provides a blockchain simulator with consensus and transaction-processing capabilities. It also features an interactive dashboard that helps in visualizing blockchain technology in networks of varying sizes. The dashboard is designed to be user-friendly and interactive, allowing users to explore how changes affect network structure.
 
 ## Simulation
-For examples of how to implement your own blockchain simulation, refer to the `examples/` directory.
+For examples of how to implement your own blockchain simulation using this repository, refer to the `examples/` directory.
 
 ## Online Version
 [https://chrismortensen.streamlit.app](https://chrismortensen.streamlit.app)  
@@ -29,4 +29,4 @@ For examples of how to implement your own blockchain simulation, refer to the `e
     streamlit run streamlit_app.py
     ```
 
-4. Open your web browser and navigate to `http://localhost:8501` to access the application.
+4. Open your web browser and navigate to `localhost:8501` to access the application.
