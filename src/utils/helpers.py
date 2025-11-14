@@ -1,4 +1,4 @@
-def print_all_balances(wallets: list, utxo_set: list) -> None:
+def print_all_balances(wallets: list) -> None:
     for wallet in wallets:
-        balance = wallet.get_balance(utxo_set)
+        balance = wallet.get_balance()
         print(f"{wallet.get_address().to_string().hex()}'s balance: {balance}")

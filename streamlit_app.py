@@ -1,7 +1,6 @@
 import streamlit as st
-from pyvis.network import Network as pyvis_Network
 import streamlit.components.v1 as components
-import random
+from pyvis.network import Network as pyvis_Network
 
 from src.core.network import Network
 from src.core.node import Node
@@ -25,13 +24,13 @@ st.markdown("""
     padding: 12px;
     border-radius: 10px;
     margin: 8px 0;
-    color: black;
+    background-color: #262730;
 }
 
-.metric-nodes { background-color: #e8f5e8; }
-.metric-edges { background-color: #e3f2fd; }
-.metric-distribution { background-color: #f3e5f5; }
-
+.metric-header { 
+    text-align: center;
+    color: #fafafa; 
+}
             
 .metric-label {
     text-align: center;
@@ -44,6 +43,8 @@ st.markdown("""
     text-align: center;
     font-size: 1.4rem;
     margin: 0;
+    color: #fafafa;
+    font-weight: 400;
 }
 
 .node-type-label{
@@ -99,22 +100,31 @@ class NetworkVisualizer:
     def _add_nodes_to_graph(self):
         start_id = len(self.pyvis_net.nodes)
 
+        node_counters = {
+            'node': 0,
+            'wallet': 0, 
+            'miner': 0
+        }
+
         for i, node in enumerate(self.all_nodes):
             node_id = start_id + i
             node_type = self._get_node_type(node)
             properties = NetworkVisualizer.node_properties[node_type]
+            
+            node_counters[node_type] += 1
+            id_for_type = node_counters[node_type]
+
             if node_type == 'wallet':
                 node_public_key = node.get_address().to_string().hex()
                 node_name = self.wallet_names[node_public_key]
                 label = node_name
             else:
-                label = f"{node_type} {i}"
-            if not show_labels: label = ""
+                label = f"{node_type} {id_for_type}"
+            if not self.show_labels: label = ""
 
             if isinstance(node, Wallet):
-                random_peer = random.choice(list(node.peers))
-                balance = node.get_balance(random_peer.blockchain.utxo_set)
-                title = f"Balance: {balance}"
+                public_key = node.get_address().to_string().hex()
+                title = f"""public_key: {public_key}"""
             if isinstance(node, Node):
                 peer_total = len(node.peers)
                 title = f"Peers: {peer_total}"
@@ -187,19 +197,28 @@ class NetworkVisualizer:
 
 def generate_network():
     network = Network(node_amount, wallet_amount, miner_amount, min_node_peers, min_wallet_peers, min_miner_peers)
+    for miner in network.miners:
+        miner.start_mining()
+
+    genesis_utxo_set = []
+    initial_balance = 50
+    for ID, wallet in enumerate(network.wallets):
+        genesis_utxo_set.append({"txid": "initial_transaction", "index": ID, "amount": initial_balance, "owner_address": wallet.get_address()})
+    network.add_genesis_utxos(genesis_utxo_set)
+    
+    st.session_state.network = network
+    st.session_state.network_generated = True
 
     visualizer = NetworkVisualizer(network, show_labels)
     visualizer.generate_visualization()
+    
     html_content = visualizer.get_html_content()
-
     st.session_state.html_content = html_content
-    st.session_state.network_generated = True
-    st.session_state.actual_network = network
-    st.session_state.pyvis_net = visualizer.pyvis_net
+    st.session_state.visualizer = visualizer
 
 with st.sidebar:
     st.title("Blockchain Network Visualizer")
-    st.write("Visualize blockchain networks of varying complexity")
+    st.write("Adjust the parameters below to customize the blockchain network.")
     st.write("`Created by:`")
     linkedin_url = "https://www.linkedin.com/in/christiansvalgaard/"
     st.markdown(f'<a href="{linkedin_url}" target="_blank" style="text-decoration: none; color: inherit;"><img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" width="25" height="25" style="vertical-align: middle; margin-right: 10px;">`Christian S. Mortensen`</a>', unsafe_allow_html=True)
@@ -214,8 +233,8 @@ with st.sidebar:
     st.markdown("---")
 
     st.subheader("Peer Connections")
-    min_wallet_peers = st.slider("Wallet Min Peers", 1, 6, 2)
-    min_miner_peers = st.slider("Miner Min Peers", 1, 6, 2)
+    min_wallet_peers = st.slider("Wallet Peers", 1, 6, 2)
+    min_miner_peers = st.slider("Miner Peers", 1, 6, 2)
     min_node_peers = st.slider("Node Min Peers", 1, 8, 4)
 
     st.markdown("---")
@@ -255,13 +274,13 @@ def display_node_types():
 
 def display_network_structure():
     col1, col2, col3 = st.columns(3)
-    pyvis_net = st.session_state.pyvis_net
+    pyvis_net = st.session_state.visualizer.pyvis_net
     with col1:
         node_amount_stat = len(pyvis_net.nodes)
         st.markdown(f"""
-            <div class="metric-container metric-nodes">
+            <div class="metric-container">
                 <div>
-                    <div class="metric-label">Total Nodes</div>
+                    <div class="metric-header">Number of Nodes In Network</div>
                     <div class="metric-value">{node_amount_stat}</div>
                 </div>
             </div>
@@ -270,45 +289,37 @@ def display_network_structure():
     with col2:
         edge_amount_stat = len(pyvis_net.edges)
         st.markdown(f"""
-            <div class="metric-container metric-edges">
+            <div class="metric-container">
                 <div>
-                    <div class="metric-label">Total Connections</div>
+                    <div class="metric-header">Total Connections</div>
                     <div class="metric-value">{edge_amount_stat}</div>
                 </div>
             </div>
         """, unsafe_allow_html=True)
 
     with col3:
-        network = st.session_state.actual_network
+        network = st.session_state.network
         miners = len(network.miners)
         wallets = len(network.wallets)
         nodes = len(network.nodes)
         
         st.markdown(f"""
-            <div class="metric-container metric-distribution">
+            <div class="metric-container">
                 <div>
-                    <div class="metric-label">Network Structure</div>
-                    <div class="metric-value">Miners: {miners}   Wallets: {wallets}   Nodes: {nodes}</div>
+                    <div class="metric-header">Network Structure</div>
+                    <div class="metric-value">Wallets: {wallets} | Miners: {miners} | Nodes: {nodes}</div>
                 </div>
             </div>
         """, unsafe_allow_html=True)
 
 def display_main_page():
-    st.title("Crypto Network Visualizer")
-    st.write("Interactive visualization of cryptocurrency network nodes and connections")
-    st.markdown("---")  
-
+    st.title("Blockchain Network")
+    st.write("This visualization shows the structure of a blockchain simulation running on machine with consensus, and transaction processing capabilities.")
+    st.markdown("---")
     display_node_types()
-    st.markdown("---")  
-    
-    # Display network  
+    st.markdown("---")
     components.html(st.session_state.html_content, height=700)
-    #st.markdown("---")
-
-    # Display tip
-    #st.info("Drag nodes to rearrange the network. Zoom with mouse wheel.")
-
+    st.info("Zoom with mouse wheel. Hover over nodes to see details. Drag nodes to rearrange the network.")
     display_network_structure()
-    #st.markdown("---")
 
 display_main_page()

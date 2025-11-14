@@ -17,18 +17,35 @@ class Wallet():
     def verify(self, data: bytes, signature: bytes):
         return self.public_key.verify(signature, data)
 
-    def get_balance(self, utxo_set: list) -> int:
-        balance = 0
-        for utxo in utxo_set:
-            if utxo['owner_address'] == self.get_address():
-                balance += utxo['amount']
-        return balance
+    def get_balance(self) -> int:
+        balances = []
+        for node in self.peers:
+            try:
+                utxo_set = node.blockchain.utxo_set
+                balance = 0
+                for utxo in utxo_set:
+                    if utxo['owner_address'] == self.get_address():
+                        balance += utxo['amount']
+                balances.append(balance)
+            except:
+                continue
+        
+        if not balances:
+            return 0
+        
+        balances.sort()
+        return balances[len(balances) // 2]
 
-    def create_transaction(self, recipient_address: bytes, amount: int, utxos: list):
+    def create_transaction(self, recipient_address, amount):
         # Create inputs (choose UTXOs to cover the amount + fee)
         inputs = []
         total = 0
         charge = amount + Transaction.fee
+
+        from random import choice
+        peer_node = choice(list(self.peers))
+        utxos = peer_node.blockchain.utxo_set
+
         for utxo in utxos:
             if utxo['owner_address'] == self.get_address():
                 inputs.append(utxo)
@@ -49,4 +66,10 @@ class Wallet():
         signature = self.sign(tx._serialize_for_signing())
         tx.signature = signature
 
-        return tx
+        self._propegate_transaction(tx)
+    
+    def _propegate_transaction(self, transaction):
+        for peer in self.peers:
+            if peer.is_new_transaction(transaction.txid): # Check to avoid sending unnecessary data
+                peer.receive_transaction(transaction)
+        return

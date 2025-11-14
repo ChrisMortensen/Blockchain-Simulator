@@ -7,7 +7,7 @@ from src.core.block import Block
 from src.wallet.wallet import Wallet
 from src.utils.crypto import is_valid_proof
 
-MINER_POW_SLEEP = 0.025 # Limit computation requirements
+MINER_POW_SLEEP = 1 # Limit ressource usage
 
 class Miner(Wallet):
     
@@ -15,6 +15,7 @@ class Miner(Wallet):
         super().__init__()
         self.is_mining = False
         self.mining_thread = None
+        self.primary_node = None
 
     def start_mining(self):
         if not self.is_mining:
@@ -29,14 +30,12 @@ class Miner(Wallet):
             self.is_mining = False
 
     def _mine(self):
-        if not self.peers:
-            raise ValueError("Miner must be attached to a node")
-        
-        self.primary_node = random.choice(list(self.peers))
-        blockchain = self.primary_node.blockchain
-
-        while True:
+        while self.is_mining:
+            self.primary_node = random.choice(list(self.peers))
+            blockchain = self.primary_node.blockchain
             prev_hash = blockchain.last_block_hash
+            best_block = blockchain.get_best_block()
+            new_block_height = best_block.height + 1
             transactions = blockchain.mempool.copy()
             reward_amount = blockchain.block_subsidy + Transaction.fee * len(transactions)
             
@@ -45,20 +44,24 @@ class Miner(Wallet):
                 reward=reward_amount
             )
             transactions.insert(0, reward_tx)
+            
+            block = Block(transactions, prev_hash, blockchain.difficulty, new_block_height)
 
-            block = Block(transactions, prev_hash, blockchain.difficulty)
-            self._solve_block(block)
+            success = self._solve_block(block)
+            if not success:
+                continue
     
     def _solve_block(self, block):
+        block.nonce = random.randint(0, 1000000)
         while True:
             block.compute_hash()
+
+            if block.prev_hash != self.primary_node.blockchain.last_block_hash:
+                return
 
             if is_valid_proof(block.hash, self.primary_node.blockchain.difficulty):
                 self.primary_node.receive_block(block)
                 return
 
-            if block.prev_hash != self.primary_node.blockchain.last_block_hash:
-                return
-
             time.sleep(MINER_POW_SLEEP)
-            block.nonce += 1 # Change this so different miners dont interate over the same values
+            block.nonce += 1
