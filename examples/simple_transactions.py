@@ -15,11 +15,10 @@ if __name__ == "__main__":
     blockchain = node.blockchain
     miner = network.miners[0]
     wallets = network.wallets + network.miners
-    genesis_utxo_set = [
-        {"txid": "initial_transaction", "index": 0, "amount": 50, "owner_address": alice.get_address()},
-        {"txid": "initial_transaction", "index": 1, "amount": 50, "owner_address": bob.get_address()},
-        {"txid": "initial_transaction", "index": 2, "amount": 50, "owner_address": chris.get_address()},
-    ]
+    genesis_utxo_set = []
+    initial_balance = 50
+    for ID, wallet in enumerate(network.wallets):
+        genesis_utxo_set.append({"txid": "initial_transaction", "index": ID, "amount": initial_balance, "owner_address": wallet.get_address()})
     network.add_genesis_utxos(genesis_utxo_set)
 
     # Check initial balances
@@ -31,13 +30,11 @@ if __name__ == "__main__":
     # Chris sends 10 to Bob
     chris.create_transaction(bob.get_address(), 10)
 
-    # Get last block hash so we know when the transactions have been processed
-    latest_block = blockchain.last_block_hash
-
     # Process transactions
     miner.start_mining()
 
-    while latest_block == blockchain.last_block_hash:
+    # Wait for new block
+    while blockchain.get_best_block().height < 1:
         time.sleep(0.001)
 
     # Check final balances
